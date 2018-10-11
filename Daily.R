@@ -13,6 +13,7 @@ library(RMySQL)
 
 
 adr='Z:\\Risk Control\\rawdata\\'
+dbadr<-'//172.16.23.200/共享/riskplantform/db/'
 #td 函数生成日期序列数据
 
 #读取基金列表信息
@@ -69,7 +70,7 @@ dbWriteTable(con, "zotd", zotd, overwrite=FALSE, append=TRUE,row.names=F)
 fasset<-data.table(attach(paste(adr,'fasset_dc.Rdata',sep=''),pos=2)$fasset)
 detach(pos=2)
 fasset<-fasset[order(code,date,na.last = TRUE,decreasing = FALSE),]
-fasset<-fasset[nav!=0]
+fasset<-fasset[unv!=0]
 fasset[is.na(inv)]$inv<-0
 fasset[is.na(outv)]$outv<-0
 fasset[is.na(rt_dc)]$rt_dc<-0
@@ -126,6 +127,9 @@ for (ii in 1:length(tt$code))
   } 
 }  
 fasset[str_c(code,date) %in% str_c(fcode_dc$code,fcode_dc$sopdate)]$snav<-fasset[str_c(code,date) %in% str_c(fcode_dc$code,fcode_dc$sopdate)]$inv
+#筛选一下，去掉早于份额起始日的数据
+tpcd<-temp[date>=sopdate]
+fasset<-fasset[str_c(code,date) %in% str_c(tpcd$code,tpcd$date)]
 
 
 dbWriteTable(con, "fundasset", fasset[,.(code,date,name,innercode,nav,share,unv,accunv,preunv_dc,tav,treturn,rt_dc,inv,outv,div,split,snav,preunv,preunv_td,preunv_ztd)], overwrite=FALSE, append=TRUE,row.names=F)
@@ -135,9 +139,11 @@ dbWriteTable(con, "fundasset", fasset[,.(code,date,name,innercode,nav,share,unv,
 #持仓数据的整理
 fhold<-data.table(attach(paste(adr,'fhold_dc.Rdata',sep=''),pos=2)$fhold)
 detach(pos=2)
+fhold<-fhold[,.(volume=sum(volume),ctvalue=sum(ctvalue),cvalue=sum(cvalue),taccvalue=sum(taccvalue),fvalue=sum(fvalue),ctprice=sum(ctvalue)/sum(volume),cprice=sum(cvalue)/sum(volume),fprice=sum(fprice)/sum(volume),tacc=sum(taccvalue)/sum(volume)),by=.(code,name,date,seccode,secname,market,pos,atype,tradeable)]
 fhold<-fhold[order(code,seccode,date,na.last = TRUE,decreasing = FALSE),]
 fhold<-merge(fhold,fasset[,.(code,date,nav)],by=c('code','date'),all.x=TRUE)
 fhold$cratio<-fhold$cvalue/fhold$nav
+fhold<-fhold[.(code,date,name,seccode,secname,market,volume,ctvalue,cvalue,taccvalue,pos,atype,tradeable,fvalue,ctprice,cprice,fprice,tacc,nav,cratio)]
 dbWriteTable(con, "fundhold", fhold, overwrite=FALSE, append=TRUE,row.names=F)
 
 
