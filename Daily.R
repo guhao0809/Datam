@@ -130,7 +130,7 @@ fasset[str_c(code,date) %in% str_c(fcode_dc$code,fcode_dc$sopdate)]$snav<-fasset
 #筛选一下，去掉早于份额起始日的数据
 tpcd<-temp[date>=sopdate]
 fasset<-fasset[str_c(code,date) %in% str_c(tpcd$code,tpcd$date)]
-
+fasset[is.na(preunv) & !(pred %in% td$date) & date %in% td$date]$preunv<-fasset[is.na(preunv) & !(pred %in% td$date) & date %in% td$date]$preunv_td
 
 dbWriteTable(con, "fundasset", fasset[,.(code,date,name,innercode,nav,share,unv,accunv,preunv_dc,tav,treturn,rt_dc,inv,outv,div,split,snav,preunv,preunv_td,preunv_ztd)], overwrite=FALSE, append=TRUE,row.names=F)
 
@@ -143,7 +143,7 @@ fhold<-fhold[,.(volume=sum(volume),ctvalue=sum(ctvalue),cvalue=sum(cvalue),taccv
 fhold<-fhold[order(code,seccode,date,na.last = TRUE,decreasing = FALSE),]
 fhold<-merge(fhold,fasset[,.(code,date,nav)],by=c('code','date'),all.x=TRUE)
 fhold$cratio<-fhold$cvalue/fhold$nav
-fhold<-fhold[.(code,date,name,seccode,secname,market,volume,ctvalue,cvalue,taccvalue,pos,atype,tradeable,fvalue,ctprice,cprice,fprice,tacc,nav,cratio)]
+fhold<-fhold[,.(code,date,name,seccode,secname,market,volume,ctvalue,cvalue,taccvalue,pos,atype,tradeable,fvalue,ctprice,cprice,fprice,tacc,nav,cratio)]
 dbWriteTable(con, "fundhold", fhold, overwrite=FALSE, append=TRUE,row.names=F)
 
 
