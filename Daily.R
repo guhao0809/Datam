@@ -449,7 +449,12 @@ fundrt<-rbind(tmp_rt,tmp_rt_td,tmp_rt_ztd,benchr)
 dbWriteTable(con, "fundrt",fundrt, overwrite=FALSE, append=TRUE,row.names=F)
 
 
-  
+cons<-dbListConnections(MySQL())
+for(con in cons) 
+{
+  dbDisconnect(con)
+}
+gc()
   
 
 
