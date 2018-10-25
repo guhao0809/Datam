@@ -17,11 +17,17 @@ dbadr<-'//172.16.23.200/共享/riskplantform/db/'
 #td 函数生成日期序列数据
 
 #读取基金列表信息
-fcode_dc<-as.data.table(read.xlsx2(paste(dbadr,'portfoliobasic_dc.xlsx',sep=''),1,stringsAsFactors = FALSE)[c('dccode','组合成立日','策略组','账户组','内部分类','组合简称','shareopdate')])
-names(fcode_dc)<-c('code','setupdate','dept','itype','innerclass','name','sopdate')
+fcode_dc<-as.data.table(read.xlsx2(paste(dbadr,'portfoliobasic_dc.xlsx',sep=''),1,stringsAsFactors = FALSE)[c('dccode','组合简称','组合成立日','shareopdate','数据中心代码','组合代码','账户组','内部分类','lvl','策略组')])
+names(fcode_dc)<-c('code','name','setupdate','sopdate','zcode','mcode','issuetype','innerclass','lvl','dept')
 fcode_dc$setupdate<-as.Date(as.numeric(fcode_dc$setupdate),origin='1899-12-30')
 fcode_dc$sopdate<-as.Date(as.numeric(fcode_dc$sopdate),origin='1899-12-30')
 save(fcode_dc,file=paste(adr,'fcode_dc.Rdata',sep=""))
+
+con <- dbConnect(MySQL(),host="172.16.22.186",port=3306,dbname="rm",user="xiangaixu",password="123456")
+dbSendQuery(con,'SET NAMES gbk')
+
+dbWriteTable(con, "fundbasic", fcode_dc, overwrite=FALSE, append=TRUE,row.names=F)
+
 
 
 
@@ -59,8 +65,7 @@ ztd$preztd<-preztd
 zotd<-merge(wd,td,by='date',all.x=TRUE)
 zotd<-merge(zotd,ztd,by='date',all.x=TRUE)
 
-con <- dbConnect(MySQL(),host="172.16.22.186",port=3306,dbname="rm",user="xiangaixu",password="123456")
-dbSendQuery(con,'SET NAMES gbk')
+
 dbWriteTable(con, "zotd", zotd, overwrite=FALSE, append=TRUE,row.names=F)
 
 
@@ -208,8 +213,8 @@ ftrade<-ftrade[,.(volume=sum(volume),cvalue=sum(cvalue),fvalue=sum(fvalue),taccv
 
 hnt_temp<-unique(rbind(fhold[,.(code,date,seccode,market,atype)],ftrade[,.(code,date,seccode,market,atype)]))
 hnt_temp<-merge(hnt_temp,zotd,by=c('date'),allow.cartesian = TRUE)
-hnt_temp<-merge(hnt_temp,fhold[,.(volume=sum(volume),cvalue=sum(volume),fvalue=sum(fvalue),ctvalue=sum(ctvalue)),by=.(code,date,seccode,pos)],by=c('code','date','seccode'),all.x=TRUE)
-hnt_temp<-merge(hnt_temp,fhold[,.(pvolume=sum(volume),pcvalue=sum(volume),pfvalue=sum(fvalue),pctvalue=sum(ctvalue)),by=.(code,date,seccode,pos)],by.x=c('code','pred','seccode','pos'),by.y=c('code','date','seccode','pos'),all.x=TRUE)
+hnt_temp<-merge(hnt_temp,fhold[,.(volume=sum(volume),cvalue=sum(cvalue),fvalue=sum(fvalue),ctvalue=sum(ctvalue)),by=.(code,date,seccode,pos)],by=c('code','date','seccode'),all.x=TRUE)
+hnt_temp<-merge(hnt_temp,fhold[,.(pvolume=sum(volume),pcvalue=sum(cvalue),pfvalue=sum(fvalue),pctvalue=sum(ctvalue)),by=.(code,date,seccode,pos)],by.x=c('code','pred','seccode','pos'),by.y=c('code','date','seccode','pos'),all.x=TRUE)
 ftrade_cl<-merge(ftrade[cvalue>0,.(bvolume=sum(volume),bcvalue=sum(cvalue),bfvalue=sum(fvalue)),by=.(code,date,seccode,pos)],ftrade[cvalue<0,.(svolume=sum(volume),scvalue=sum(cvalue),sfvalue=sum(fvalue)),by=.(code,date,seccode,pos)],by=c('code','date','seccode','pos'),all=TRUE)
 hnt_temp<-merge(hnt_temp,ftrade_cl,by=c('code','date','seccode','pos'),all.x=TRUE)
 
@@ -234,6 +239,7 @@ dbWriteTable(con, "hnt", hnt_temp, overwrite=FALSE, append=TRUE,row.names=F)
 #业绩分解数据处理
 fdec<-data.table(attach(paste(adr,'fdec_dc.Rdata',sep=''),pos=2)$fdec)
 detach(pos=2)
+fdec<-fdec[,.(gain=sum(gain),rctr=sum(rctr)),by=.(code,date,seccode,market,atype,type)]
 dbWriteTable(con, "fdec", fdec, overwrite=FALSE, append=TRUE,row.names=F)
 
 
@@ -248,7 +254,7 @@ mindex<-merge(mindex,pbench[,.(indcode,indcode_dc)],by='indcode_dc',all.x=TRUE)
 pmi<-data.table(dbGetQuery(con, str_c('SELECT indcode,date,close FROM rm.mindex where date between \'', as.Date(w.tdaysoffset(-1,std)$Data[,1]), '\' and \'', std-1, '\'')))
 pmi$date<-as.Date(pmi$date)
 
-temp<-rbind(mindex[,.(indcode,date,close)],pmi)
+temp<-rbind(mindex[,.(indcode,date,close)],pmi[date<min(mindex$date)])
 temp<-temp[order(indcode,date)]
 #得到preclose和涨跌幅的数字
 mi_aft<-temp[-1,]
@@ -447,6 +453,39 @@ benchr<-benchr[,.(code,date,rt,type,cumtype)]
 
 fundrt<-rbind(tmp_rt,tmp_rt_td,tmp_rt_ztd,benchr)  
 dbWriteTable(con, "fundrt",fundrt, overwrite=FALSE, append=TRUE,row.names=F)
+
+
+#生成每日的中证800指数成分及权重信息
+# sqlstr<-str_c('select S_INFO_WINDCODE as indcode, S_CON_WINDCODE as seccode, S_CON_INDATE as ssd, S_CON_OUTDATE as eed from NEWWIND.AIndexMembers where S_INFO_WINDCODE = \'000906.SH\'')
+# indcons<-data.table(sqlQuery(winddb,sqlstr,as.is=TRUE))
+# names(indcons)<-c('indcode','seccode','ssd','eed')
+# indcons$ssd<-as.Date(indcons$ssd,format='%Y%m%d')
+# indcons$eed<-as.Date(indcons$eed,format='%Y%m%d')
+# indcons[is.na(eed)]$eed<-as.Date('2999-12-31')
+
+# #读取股票权数数据
+# sqlstr<-str_c('select S_INFO_WINDCODE,CHANGE_DT,S_INFO_WEIGHTS,S_INFO_INDEX_WEIGHTSRULE from NEWWIND.BOIndexWeightsWIND where  S_INFO_WINDCODE in (select UNIQUE(S_CON_WINDCODE) from NEWWIND.AIndexMembers where S_INFO_WINDCODE = \'000906.SH\' )')
+# indcons_wn<-data.table(sqlQuery(winddb,sqlstr,as.is=TRUE))
+# names(indcons_wn)<-c('seccode','chgd','wn','type')
+# indcons_wn$chgd<-as.Date(indcons_wn$chgd,format='%Y%m%d')
+
+# sqlstr<-str_c('select S_INFO_WINDCODE as seccode,TRADE_DT ,S_DQ_CLOSE as price from NEWWIND.AShareEODPrices where S_INFO_WINDCODE in (select UNIQUE(S_CON_WINDCODE) from NEWWIND.AIndexMembers where S_INFO_WINDCODE = \'000906.SH\' ) and TRADE_DT between \'', format(min(zotd$date),'%Y%m%d') ,'\' and \'',format(max(zotd$date),'%Y%m%d') ,'\'')
+# secprice<-data.table(sqlQuery(winddb,sqlstr,as.is=TRUE))
+# names(secprice)<-c('seccode','date','price')
+# secprice$date<-as.Date(secprice$date,format='%Y%m%d')
+
+
+# tmp_indcon_wt<-merge(indcons,indcons_wn,by='seccode',allow.cartesian=T,all.x=TRUE)
+
+# ds<-unique(zotd[!is.na(pretd)]$date)
+# for (ii in 1 : length(ds))
+# {
+#   tmp<-tmp_indcon_wt[ssd<=ds[ii] & eed>ds[ii] & type==7]
+#   tmp<-merge(,secprice,by=c('seccode'))
+
+# }
+
+
 
 
 cons<-dbListConnections(MySQL())
