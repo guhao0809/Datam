@@ -195,12 +195,13 @@ ftrade$cprice<-ftrade$cvalue/ftrade$volume
 ftrade$fprice<-ftrade$fvalue/ftrade$volume
 ftrade$clprice<-ftrade$clvalue/ftrade$volume
 
-fundtrade<-ftrade[,.(code,name,date,seccode,market,atype,volume,fprice,cprice,clprice,cvalue,fvalue,clvalue,taccvalue,fee,ttype,tattr,pos,tax,tacc)]
+fundtrade<-ftrade[,.(volume=sum(volume),cvalue=sum(cvalue),fvalue=sum(fvalue),clvalue=sum(clvalue),taccvalue=sum(taccvalue),fee=sum(fee),tax=sum(tax),tacc=sum(taccvalue)/sum(volume),fprice=sum(fvalue)/sum(volume),cprice=sum(cvalue)/sum(volume),clprice=sum(clvalue)/sum(volume)),by=.(code,date,seccode,market,atype,pos,ttype,tattr)]
+fundtrade<-fundtrade[,.(code,date,seccode,market,atype,volume,fprice,cprice,clprice,cvalue,fvalue,clvalue,taccvalue,fee,ttype,tattr,pos,tax,tacc)]
 library(DBI)
 library(RMySQL)
 dbWriteTable(con, "fundtrade", fundtrade, overwrite=FALSE, append=TRUE,row.names=F)
+ftrade<-ftrade[,.(volume=sum(volume),cvalue=sum(cvalue),fvalue=sum(fvalue),taccvalue=sum(taccvalue),fee=sum(fee),tax=sum(tax),tacc=sum(tacc)),by=.(code,date,seccode,market,atype,pos)]
 
-ftrade<-ftrade[,.(volume=sum(volume),cvalue=sum(cvalue),fvalue=sum(fvalue),taccvalue=sum(taccvalue),fee=sum(fee),tax=sum(tax),tacc=sum(tacc)),by=.(code,name,date,seccode,market,atype,pos)]
 
 
 
@@ -229,8 +230,8 @@ hnt_temp[is.na(pfvalue)]$pfvalue<-0
 hnt_temp[is.na(bfvalue)]$bfvalue<-0
 
 
-hnt_temp$secr_c_h<-(hnt_temp$cvalue+hnt_temp$scvalue)/(hnt_temp$pcvalue+hnt_temp$bcvalue)-1
-hnt_temp$secr_f_h<-(hnt_temp$fvalue+hnt_temp$sfvalue)/(hnt_temp$pfvalue+hnt_temp$bfvalue)-1
+hnt_temp$secr_c_h<-(hnt_temp$cvalue-hnt_temp$scvalue)/(hnt_temp$pcvalue+hnt_temp$bcvalue)-1
+hnt_temp$secr_f_h<-(hnt_temp$fvalue-hnt_temp$sfvalue)/(hnt_temp$pfvalue+hnt_temp$bfvalue)-1
 
 dbWriteTable(con, "hnt", hnt_temp, overwrite=FALSE, append=TRUE,row.names=F)
 
