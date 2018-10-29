@@ -311,9 +311,9 @@ dbWriteTable(con, "mindex",bench_index, overwrite=FALSE, append=TRUE,row.names=F
 
 
 #生成收益率的数据
-tmp_rt<-fasset[,.(code,date,rt=unv/preunv-1,type='ad')]
-tmp_rt_td<-fasset[,.(code,date,rt=unv/preunv_td-1,type='td')]
-tmp_rt_ztd<-fasset[,.(code,date,rt=unv/preunv_ztd-1,type='ztd')]
+tmp_rt<-fasset[,.(code,date,rt=unv*split/(preunv-div)-1,type='ad')]
+tmp_rt_td<-fasset[,.(code,date,rt=unv*split/(preunv_td-div)-1,type='td')]
+tmp_rt_ztd<-fasset[,.(code,date,rt=unv*split/(preunv_ztd-div)-1,type='ztd')]
 tmp_rt_nav<-fasset[,.(code,date,rt=nav/snav-1,type='nav')]
 
 #对于一些特殊的基金，直接给定特定日期的收益率
