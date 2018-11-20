@@ -345,16 +345,16 @@ data_basic<-function(adr,dbadr){
   fdec<-fdec[,.(gain=sum(gain),rctr=sum(rctr)),by=.(code,date,seccode,market,atype,type)]
   dbWriteTable(con, "fdec", fdec, overwrite=FALSE, append=TRUE,row.names=F)
   
-  #对fdec的历史进行更新
-  temp_fdec <- as.data.table(dbGetQuery(con,str_c('select * from fdec where date between \'', std, '\' and \'',eed, '\'')))
-  fdec$pcode<-str_c(fdec$code,fdec$date,fdec$seccode,fdec$market,fdec$atype,fdec$type,fdec$gain,fdec$rctr)
-  temp_fdec$pcode<-str_c(temp_fdec$code,temp_fdec$date,temp_fdec$seccode,temp_fdec$market,temp_fdec$atype,temp_fdec$type,temp_fdec$gain,temp_fdec$rctr)
-  update_fdec<-fdec[fdec$pcode!=temp_fdec$pcode]
-  update_fdec$pcode<-NULL
-  if(length(update_fdec$code)!=0){
-    dbWriteTable(con, "fdec_temp", update_fdec, overwrite=TRUE, append=FALSE,row.names=F)
-    dbSendQuery(con,"update fdec,fdec_temp set fdec.code=fdec_temp.code,fdec.date=fdec_temp.date,fdec.seccode=fdec_temp.seccode,fdec.market=fdec_temp.market,fdec.atype=fdec_temp.atype,fdec.type=fdec_temp.type,fdec.gain=fdec_temp.gain,fdec.rctr=fdec_temp.rctr where fdec.code=fdec_temp.code,fdec.date=fdec_temp.date,fdec.seccode=fdec_temp.seccode")
-  }
+  # #对fdec的历史进行更新
+  # temp_fdec <- as.data.table(dbGetQuery(con,str_c('select * from fdec where date between \'', std, '\' and \'',eed, '\'')))
+  # fdec$pcode<-str_c(fdec$code,fdec$date,fdec$seccode,fdec$market,fdec$atype,fdec$type,fdec$gain,fdec$rctr)
+  # temp_fdec$pcode<-str_c(temp_fdec$code,temp_fdec$date,temp_fdec$seccode,temp_fdec$market,temp_fdec$atype,temp_fdec$type,temp_fdec$gain,temp_fdec$rctr)
+  # update_fdec<-fdec[fdec$pcode!=temp_fdec$pcode]
+  # update_fdec$pcode<-NULL
+  # if(length(update_fdec$code)!=0){
+  #   dbWriteTable(con, "fdec_temp", update_fdec, overwrite=TRUE, append=FALSE,row.names=F)
+  #   dbSendQuery(con,"update fdec,fdec_temp set fdec.code=fdec_temp.code,fdec.date=fdec_temp.date,fdec.seccode=fdec_temp.seccode,fdec.market=fdec_temp.market,fdec.atype=fdec_temp.atype,fdec.type=fdec_temp.type,fdec.gain=fdec_temp.gain,fdec.rctr=fdec_temp.rctr where fdec.code=fdec_temp.code,fdec.date=fdec_temp.date,fdec.seccode=fdec_temp.seccode")
+  # }
   
   #存储市场指数数据
   mindex<-data.table(attach(paste(adr,'indexprice.Rdata',sep=''),pos=2)$indexprice)
