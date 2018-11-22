@@ -253,26 +253,26 @@ data_basic<-function(adr,dbadr){
   fundtrade<-fundtrade[,.(code,date,seccode,market,atype,volume,fprice,cprice,clprice,cvalue,fvalue,clvalue,taccvalue,fee,ttype,tattr,pos,tax,tacc)]
   library(DBI)
   library(RMySQL)
-  dbWriteTable(con, "fundtrade", fundtrade, overwrite=FALSE, append=TRUE,row.names=F)
   
   #对fundtrade的历史数据进行更新
   dbSendQuery(con,'SET NAMES gbk')
   temp_trade <- as.data.table(dbGetQuery(con,str_c('select * from fundtrade where date between \'', std, '\' and \'',eed, '\'')))
   ftrade_g<-fundtrade
-  ftrade_g$pcode<-str_c(ftrade_g$code,ftrade_g$name,ftrade_g$date,ftrade_g$seccode,ftrade_g$market,ftrade_g$atype,ftrade_g$volume,ftrade_g$fprice,ftrade_g$cprice,ftrade_g$clprice,ftrade_g$cvalue,ftrade_g$fvalue,ftrade_g$clvalue,ftrade_g$taccvalue,ftrade_g$fee,ftrade_g$ttype,ftrade_g$tattr,ftrade_g$pos,ftrade_g$tax,ftrade_g$tacc)
-  temp_trade$pcode<-str_c(temp_trade$code,temp_trade$name,temp_trade$date,temp_trade$seccode,temp_trade$market,temp_trade$atype,temp_trade$volume,temp_trade$fprice,temp_trade$cprice,temp_trade$clprice,temp_trade$cvalue,temp_trade$fvalue,temp_trade$clvalue,temp_trade$taccvalue,temp_trade$fee,temp_trade$ttype,temp_trade$tattr,temp_trade$pos,temp_trade$tax,temp_trade$tacc)
   delete_ftrade<-temp_trade[!str_c(code,date,seccode,market,atype,pos,ttype,tattr) %in% str_c(ftrade_g$code,ftrade_g$date,ftrade_g$seccode,ftrade_g$market,ftrade_g$atype,ftrade_g$pos,ftrade_g$ttype,ftrade_g$tattr)]
   
   #删除数据库中多余的错误值
   if(length(delete_ftrade$code)!=0){
-    temp_trade<-temp_trade[!str_c(code,date,seccode,market,atype,pos,ttype,tattr) %in% str_c(delete_ftrade$code,delete_ftrade$date,delete_ftrade$seccode,delete_ftrade$market,delete_ftrade$atype,delete_ftrade$pos,delete_ftrade$ttype,delete_ftrade$tattr)]
     for(ii in 1:length(delete_ftrade$code)){
       print(ii)
       dbSendQuery(con,str_c('delete from fundtrade where code= \'',delete_ftrade$code[ii],'\' and date= \'',delete_ftrade$date[ii],'\' and seccode= \'',delete_ftrade$seccode[ii],'\' and market= \'',delete_ftrade$market[ii],'\' and pos= \'',delete_ftrade$pos[ii],'\' and atype= \'',delete_ftrade$atype[ii], '\'and ttype= \'',delete_ftrade$ttype[ii],'\' and tattr= \'',delete_ftrade$tattr[ii],'\'',sep='')) 
     }
   }
+  dbWriteTable(con, "fundtrade", fundtrade, overwrite=FALSE, append=TRUE,row.names=F)
   
   #更新数据库中的历史错误数据
+  temp_trade <- as.data.table(dbGetQuery(con,str_c('select * from fundtrade where date between \'', std, '\' and \'',eed, '\'')))
+  ftrade_g$pcode<-str_c(ftrade_g$code,ftrade_g$name,ftrade_g$date,ftrade_g$seccode,ftrade_g$market,ftrade_g$atype,ftrade_g$volume,ftrade_g$fprice,ftrade_g$cprice,ftrade_g$clprice,ftrade_g$cvalue,ftrade_g$fvalue,ftrade_g$clvalue,ftrade_g$taccvalue,ftrade_g$fee,ftrade_g$ttype,ftrade_g$tattr,ftrade_g$pos,ftrade_g$tax,ftrade_g$tacc)
+  temp_trade$pcode<-str_c(temp_trade$code,temp_trade$name,temp_trade$date,temp_trade$seccode,temp_trade$market,temp_trade$atype,temp_trade$volume,temp_trade$fprice,temp_trade$cprice,temp_trade$clprice,temp_trade$cvalue,temp_trade$fvalue,temp_trade$clvalue,temp_trade$taccvalue,temp_trade$fee,temp_trade$ttype,temp_trade$tattr,temp_trade$pos,temp_trade$tax,temp_trade$tacc)
   ftrade_g<-ftrade_g[order(code,date,seccode,decreasing = FALSE)]
   temp_trade<-temp_trade[order(code,date,seccode,decreasing = FALSE)]
   update_trade<-ftrade_g[ftrade_g$pcode!=temp_trade$pcode]
@@ -309,26 +309,22 @@ data_basic<-function(adr,dbadr){
   hnt_temp$secr_c_h<-(hnt_temp$cvalue-hnt_temp$scvalue)/(hnt_temp$pcvalue+hnt_temp$bcvalue)-1
   hnt_temp$secr_f_h<-(hnt_temp$fvalue-hnt_temp$sfvalue)/(hnt_temp$pfvalue+hnt_temp$bfvalue)-1
   
-  dbWriteTable(con, "hnt", hnt_temp, overwrite=FALSE, append=TRUE,row.names=F)
-  
   #删除hnt中多余的记录
   temp_hnt <- as.data.table(dbGetQuery(con,str_c('select * from hnt where date between \'', std, '\' and \'',eed, '\'')))
-  hnt_temp$pcode<-str_c(hnt_temp$code,hnt_temp$date,hnt_temp$seccode,hnt_temp$pos,hnt_temp$pred,hnt_temp$market,hnt_temp$atype,hnt_temp$pretd,hnt_temp$preztd,hnt_temp$volume,hnt_temp$cvalue,hnt_temp$fvalue,hnt_temp$ctvalue,hnt_temp$pvolume,hnt_temp$pcvalue,hnt_temp$pfvalue,hnt_temp$pctvalue,hnt_temp$bvolume,hnt_temp$bcvalue,hnt_temp$bfvalue,hnt_temp$svolume,hnt_temp$scvalue,hnt_temp$sfvalue,hnt_temp$secr_c_h,hnt_temp$secr_f_h)
-  temp_hnt$pcode<-str_c(temp_hnt$code,temp_hnt$date,temp_hnt$seccode,temp_hnt$pos,temp_hnt$pred,temp_hnt$market,temp_hnt$atype,temp_hnt$pretd,temp_hnt$preztd,temp_hnt$volume,temp_hnt$cvalue,temp_hnt$fvalue,temp_hnt$ctvalue,temp_hnt$pvolume,temp_hnt$pcvalue,temp_hnt$pfvalue,temp_hnt$pctvalue,temp_hnt$bvolume,temp_hnt$bcvalue,temp_hnt$bfvalue,temp_hnt$svolume,temp_hnt$scvalue,temp_hnt$sfvalue,temp_hnt$secr_c_h,temp_hnt$secr_f_h)
-  hnt_temp<-hnt_temp[order(code,date,seccode,pos,decreasing = FALSE)]
-  temp_hnt<-temp_hnt[order(code,date,seccode,pos,decreasing = FALSE)]
-  
   delete_hnt<-temp_hnt[!str_c(code,date,seccode,pos) %in% str_c(hnt_temp$code,hnt_temp$date,hnt_temp$seccode,hnt_temp$pos)]
   if(length(delete_hnt$code)!=0){
-    temp_hnt<-temp_hnt[!str_c(code,date,seccode,pos) %in% str_c(delete_hnt$code,delete_hnt$date,delete_hnt$seccode,delete_hnt$pos)]
     for(ii in 1:length(delete_hnt$code)){
       print(ii)
       dbSendQuery(con,str_c('delete from hnt where code= \'',delete_hnt$code[ii],'\' and date= \'',delete_hnt$date[ii],'\' and seccode= \'',delete_hnt$seccode[ii],'\' and pos= \'',delete_hnt$pos[ii],'\'',sep='')) 
     }
   }
   
+  dbWriteTable(con, "hnt", hnt_temp, overwrite=FALSE, append=TRUE,row.names=F)
   
   #对hnt的历史数据进行更新
+  temp_hnt <- as.data.table(dbGetQuery(con,str_c('select * from hnt where date between \'', std, '\' and \'',eed, '\'')))
+  hnt_temp$pcode<-str_c(hnt_temp$code,hnt_temp$date,hnt_temp$seccode,hnt_temp$pos,hnt_temp$pred,hnt_temp$market,hnt_temp$atype,hnt_temp$pretd,hnt_temp$preztd,hnt_temp$volume,hnt_temp$cvalue,hnt_temp$fvalue,hnt_temp$ctvalue,hnt_temp$pvolume,hnt_temp$pcvalue,hnt_temp$pfvalue,hnt_temp$pctvalue,hnt_temp$bvolume,hnt_temp$bcvalue,hnt_temp$bfvalue,hnt_temp$svolume,hnt_temp$scvalue,hnt_temp$sfvalue,hnt_temp$secr_c_h,hnt_temp$secr_f_h)
+  temp_hnt$pcode<-str_c(temp_hnt$code,temp_hnt$date,temp_hnt$seccode,temp_hnt$pos,temp_hnt$pred,temp_hnt$market,temp_hnt$atype,temp_hnt$pretd,temp_hnt$preztd,temp_hnt$volume,temp_hnt$cvalue,temp_hnt$fvalue,temp_hnt$ctvalue,temp_hnt$pvolume,temp_hnt$pcvalue,temp_hnt$pfvalue,temp_hnt$pctvalue,temp_hnt$bvolume,temp_hnt$bcvalue,temp_hnt$bfvalue,temp_hnt$svolume,temp_hnt$scvalue,temp_hnt$sfvalue,temp_hnt$secr_c_h,temp_hnt$secr_f_h)
   hnt_temp<-hnt_temp[order(code,date,seccode,pos,decreasing = FALSE)]
   temp_hnt<-temp_hnt[order(code,date,seccode,pos,decreasing = FALSE)]
   update_hnt<-hnt_temp[hnt_temp$pcode!=temp_hnt$pcode]
@@ -343,18 +339,31 @@ data_basic<-function(adr,dbadr){
   fdec<-data.table(attach(paste(adr,'fdec_dc.Rdata',sep=''),pos=2)$fdec)
   detach(pos=2)
   fdec<-fdec[,.(gain=sum(gain),rctr=sum(rctr)),by=.(code,date,seccode,market,atype,type)]
+  
+  #删除fdec中多余的记录数
+  temp_fdec <- as.data.table(dbGetQuery(con,str_c('select * from fdec where date between \'', std, '\' and \'',eed, '\'')))
+  delete_fdec<-temp_fdec[!str_c(code,date,seccode,market,atype,type) %in% str_c(fdec$code,fdec$date,fdec$seccode,fdec$market,fdec$atype,fdec$type)]
+  if(length(delete_fdec$code)!=0){
+    for(ii in 1:length(delete_fdec$code)){
+      print(ii)
+      dbSendQuery(con,str_c('delete from fdec where code= \'',delete_fdec$code[ii],'\' and date= \'',delete_fdec$date[ii],'\' and seccode= \'',delete_fdec$seccode[ii],'\' and market= \'',delete_fdec$market[ii],'\' and atype= \'',delete_fdec$atype[ii],'\' and type= \'',delete_fdec$type[ii],'\'',sep='')) 
+    }
+  }
   dbWriteTable(con, "fdec", fdec, overwrite=FALSE, append=TRUE,row.names=F)
   
-  # #对fdec的历史进行更新
-  # temp_fdec <- as.data.table(dbGetQuery(con,str_c('select * from fdec where date between \'', std, '\' and \'',eed, '\'')))
-  # fdec$pcode<-str_c(fdec$code,fdec$date,fdec$seccode,fdec$market,fdec$atype,fdec$type,fdec$gain,fdec$rctr)
-  # temp_fdec$pcode<-str_c(temp_fdec$code,temp_fdec$date,temp_fdec$seccode,temp_fdec$market,temp_fdec$atype,temp_fdec$type,temp_fdec$gain,temp_fdec$rctr)
-  # update_fdec<-fdec[fdec$pcode!=temp_fdec$pcode]
-  # update_fdec$pcode<-NULL
-  # if(length(update_fdec$code)!=0){
-  #   dbWriteTable(con, "fdec_temp", update_fdec, overwrite=TRUE, append=FALSE,row.names=F)
-  #   dbSendQuery(con,"update fdec,fdec_temp set fdec.code=fdec_temp.code,fdec.date=fdec_temp.date,fdec.seccode=fdec_temp.seccode,fdec.market=fdec_temp.market,fdec.atype=fdec_temp.atype,fdec.type=fdec_temp.type,fdec.gain=fdec_temp.gain,fdec.rctr=fdec_temp.rctr where fdec.code=fdec_temp.code,fdec.date=fdec_temp.date,fdec.seccode=fdec_temp.seccode")
-  # }
+  #更新fdec中的历史记录
+  temp_fdec <- as.data.table(dbGetQuery(con,str_c('select * from fdec where date between \'', std, '\' and \'',eed, '\'')))
+  fdec$pcode<-str_c(fdec$code,fdec$date,fdec$seccode,fdec$market,fdec$atype,fdec$type,fdec$gain,fdec$rctr)
+  temp_fdec$pcode<-str_c(temp_fdec$code,temp_fdec$date,temp_fdec$seccode,temp_fdec$market,temp_fdec$atype,temp_fdec$type,temp_fdec$gain,temp_fdec$rctr)
+  temp_fdec<-temp_fdec[order(code,date,seccode,market,atype,type,decreasing = FALSE)]
+  fdec<-fdec[order(code,date,seccode,market,atype,type,decreasing = FALSE)]
+  temp_fdec<-temp_fdec[order(code,date,seccode,market,atype,type,decreasing = FALSE)]
+  update_fdec<-fdec[fdec$pcode!=temp_fdec$pcode]
+  update_fdec$pcode<-NULL
+  if(length(update_fdec$code)!=0){
+    dbWriteTable(con, "fdec_temp", update_fdec, overwrite=TRUE, append=FALSE,row.names=F)
+    dbSendQuery(con,"update fdec,fdec_temp set fdec.code=fdec_temp.code,fdec.date=fdec_temp.date,fdec.seccode=fdec_temp.seccode,fdec.market=fdec_temp.market,fdec.atype=fdec_temp.atype,fdec.type=fdec_temp.type,fdec.gain=fdec_temp.gain,fdec.rctr=fdec_temp.rctr where fdec.code=fdec_temp.code and fdec.date=fdec_temp.date and fdec.seccode=fdec_temp.seccode and fdec.market=fdec_temp.market and fdec.atype=fdec_temp.atype and fdec.type=fdec_temp.type")
+  }
   
   #存储市场指数数据
   mindex<-data.table(attach(paste(adr,'indexprice.Rdata',sep=''),pos=2)$indexprice)
@@ -419,10 +428,12 @@ data_basic<-function(adr,dbadr){
   #合并基准利率类和市场指数类，作为基准计算的基础数据，并保存
   dbWriteTable(con, "mindex",bench_index, overwrite=FALSE, append=TRUE,row.names=F)
   
+  
+  
   #生成收益率的数据
-  tmp_rt<-fasset[,.(code,date,rt=unv/preunv-1,type='ad')]
-  tmp_rt_td<-fasset[,.(code,date,rt=unv/preunv_td-1,type='td')]
-  tmp_rt_ztd<-fasset[,.(code,date,rt=unv/preunv_ztd-1,type='ztd')]
+  tmp_rt<-fasset[,.(code,date,rt=unv*split/(preunv-div)-1,type='ad')]
+  tmp_rt_td<-fasset[,.(code,date,rt=unv*split/(preunv_td-div)-1,type='td')]
+  tmp_rt_ztd<-fasset[,.(code,date,rt=unv*split/(preunv_ztd-div)-1,type='ztd')]
   tmp_rt_nav<-fasset[,.(code,date,rt=nav/snav-1,type='nav')]
   
   #对于一些特殊的基金，直接给定特定日期的收益率
@@ -564,7 +575,24 @@ data_basic<-function(adr,dbadr){
   fundrt<-rbind(tmp_rt,tmp_rt_td,tmp_rt_ztd,benchr)  
   dbWriteTable(con, "fundrt",fundrt, overwrite=FALSE, append=TRUE,row.names=F)
   
+  #删除数据库中多余的记录
+  temp_rt<-as.data.table(dbGetQuery(con,str_c('select * from fundrt where date between \'', min(fundrt$date), '\' and \'',max(fundrt$date), '\'')))
   
+  
+  #更新数据库中的业绩数据
+  temp_rt<-as.data.table(dbGetQuery(con,str_c('select * from fundrt where date between \'', min(fundrt$date), '\' and \'',max(fundrt$date), '\'')))
+  temp_rt$pcode<-str_c(temp_rt$code,temp_rt$date,temp_rt$rt,temp_rt$type,temp_rt$cumtype)
+  fundrt$pcode<-str_c(fundrt$code,fundrt$date,fundrt$rt,fundrt$type,fundrt$cumtype)
+  temp_rt<-temp_rt[order(code,date,rt,type,cumtype)]
+  fundrt<-fundrt[order(code,date,rt,type,cumtype)]
+  update_rt<-fundrt[pcode!=temp_rt$pcode]
+  update_rt$pcode<-NULL
+  if(length(update_rt$code)!=0){
+    dbWriteTable(con, "fundrt_temp", update_rt, overwrite=TRUE, append=FALSE,row.names=F)
+    dbSendQuery(con,"update fundrt,fundrt_temp set fundrt.rt=fundrt_temp.rt,fundrt.type=fundrt_temp.type,fundrt.cumtype=fundrt_temp.cumtype where fundrt.code=fundrt_temp.code and fundrt.date=fundrt_temp.date and fundrt.type=fundrt_temp.type")
+  }
+  
+   
   #生成每日的中证800指数成分及权重信息
   # sqlstr<-str_c('select S_INFO_WINDCODE as indcode, S_CON_WINDCODE as seccode, S_CON_INDATE as ssd, S_CON_OUTDATE as eed from NEWWIND.AIndexMembers where S_INFO_WINDCODE = \'000906.SH\'')
   # indcons<-data.table(sqlQuery(winddb,sqlstr,as.is=TRUE))
@@ -594,6 +622,8 @@ data_basic<-function(adr,dbadr){
   #   tmp<-merge(,secprice,by=c('seccode'))
   
   # }
+  
+  
   
   
   cons<-dbListConnections(MySQL())
